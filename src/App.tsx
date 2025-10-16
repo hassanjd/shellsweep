@@ -345,6 +345,9 @@ interface Port {
   service: string;
   state: string;
   version: string;
+  threat?: boolean;
+  threat_description?: string;
+  recommended_action?: string;
 }
 
 
@@ -1000,6 +1003,36 @@ function PortScanner() {
   const [openPorts, setOpenPorts] = useState<Port[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPort, setSelectedPort] = useState<Port | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
+
+  const handleExportReport = async () => {
+    if (!currentScanId) {
+      alert("No scan data available to export. Please run a scan first.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/export-report/${currentScanId}`);
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `port_scan_report_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export report. Please try again.');
+    }
+  };
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setScanConfig(prev => ({ ...prev, [field]: value }));
@@ -1021,6 +1054,7 @@ function PortScanner() {
       }
       const data = await response.json();
       setOpenPorts(data.results || []);
+      setCurrentScanId(data.scan_id);
       console.log('Scan results:', data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start scan');
@@ -1029,6 +1063,38 @@ function PortScanner() {
       setLoading(false);
     }
   };
+
+  function DetailsModal({ show, onClose, port }: { show: boolean, onClose: () => void, port: Port | null }) {
+    if (!show || !port) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={onClose}>
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-96 p-6 relative" onClick={(e) => e.stopPropagation()}>
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Port Details</h2>
+          <div className="space-y-2 text-gray-900 dark:text-white">
+            <p><strong>IP Address:</strong> {port.ip}</p>
+            <p><strong>Port:</strong> {port.port}</p>
+            <p><strong>Protocol:</strong> {port.protocol}</p>
+            <p><strong>Service:</strong> {port.version}</p>
+            <p><strong>State:</strong> {port.state}</p>
+            {port.threat && (
+              <>
+                <p><strong>Threat:</strong> Yes</p>
+                <p><strong>Description:</strong> {port.threat_description}</p>
+                <p><strong>Recommended Action:</strong> {port.recommended_action}</p>
+              </>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            ✖
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -1137,7 +1203,10 @@ function PortScanner() {
               <Filter size={14} />
               Filter
             </button>
-            <button className="border border-gray-300 dark:border-gray-600 px-3 py-1 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm flex items-center gap-1">
+            <button
+              onClick={handleExportReport}
+              className="border border-gray-300 dark:border-gray-600 px-3 py-1 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm flex items-center gap-1"
+            >
               <Download size={14} />
               Export
             </button>
@@ -1165,9 +1234,6 @@ function PortScanner() {
                   State
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Version
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -1185,7 +1251,7 @@ function PortScanner() {
                     {port.protocol}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                    {port.service}
+                    {port.version}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -1196,11 +1262,14 @@ function PortScanner() {
                       {port.state}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                    {port.version}
-                  </td>
                   <td className="px-4 py-3 text-sm">
-                    <button className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                    <button
+                      onClick={() => {
+                        setSelectedPort(port);
+                        setShowDetailsModal(true);
+                      }}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                    >
                       Details
                     </button>
                   </td>
@@ -1210,6 +1279,8 @@ function PortScanner() {
           </table>
         </div>
       </div>
+
+      <DetailsModal show={showDetailsModal} onClose={() => setShowDetailsModal(false)} port={selectedPort} />
     </div>
   );
 }

@@ -1,25 +1,8 @@
-# TODO: Deploy Flask Application with Frontend Integration
+# TODO: Enhance Port Scanner Details
 
-## 1. Backend Setup
-- [x] Create backend/ directory
-- [x] Convert visualmap2.py to Flask (backend/visualmap_flask.py)
-- [x] Convert portscanner.py to Flask (backend/portscanner_flask.py)
-- [x] Create main Flask app (backend/flask_app.py) that includes both backends and serves React build
-- [x] Create requirements.txt for Flask dependencies
-
-## 2. Frontend Updates
-- [x] Edit src/App.tsx: Update VisualMap fetch to '/api/devices'
-- [x] Edit src/App.tsx: Integrate PortScanner with '/api/scan' endpoint
-- [x] Build React app: npm run build
-
-## 3. Integration and Testing
-- [x] Install Python dependencies: pip install -r backend/requirements.txt
-- [x] Run Flask app: python backend/flask_app.py
-- [x] Test frontend loads at http://localhost:5000
-- [x] Test Network Map fetches devices (API responds successfully with device data using nmap)
-- [x] Test Port Scanner performs scans (API available and functional with nmap, now returns port scan results)
-
-## 4. Deployment Preparation
-- [x] Install Gunicorn: pip install gunicorn
-- [x] Test with Gunicorn: gunicorn -w 4 flask_app:app (ready to test)
-- [x] Prepare for cloud deployment (e.g., Render/Heroku): Create Procfile, ensure nmap available (Procfile created; for cloud hosts, install nmap via buildpack or apt-get)
+- [x] Add assess_threat function to evaluate security risks for ports and services
+- [x] Modify parse_nmap_output to include threat, threat_description, and recommended_action fields for open ports
+- [x] Test the backend changes to ensure JSON response includes new fields
+- [x] Add currentScanId state to track scan ID for export functionality
+- [x] Implement handleExportReport function to download PDF reports
+- [x] Update handleStartScan to set currentScanId from API response
