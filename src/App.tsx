@@ -108,7 +108,7 @@ function Sidebar() {
 }
 function PageTitle() {
   const location = useLocation();
-  
+
   const getTitle = () => {
     switch(location.pathname) {
       case '/': return 'Dashboard';
@@ -121,7 +121,7 @@ function PageTitle() {
   };
 
   return (
-    <h2 className="text-xl font-semibold mr-auto ml-4">
+    <h2 className="text-xl font-semibold mr-auto ml-4 text-gray-900 dark:text-white">
       {getTitle()}
     </h2>
   );
@@ -160,7 +160,7 @@ function TopBar({ invertColors, toggleInvertColors }: { invertColors: boolean, t
             onClick={() => setShowNotifications(!showNotifications)}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
           >
-            <Bell size={20} />
+            <Bell size={20} className="text-gray-900 dark:text-white" />
           </button>
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 z-50">
@@ -174,14 +174,14 @@ function TopBar({ invertColors, toggleInvertColors }: { invertColors: boolean, t
           onClick={() => window.print()}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
         >
-          <Printer size={20} />
+          <Printer size={20} className="text-gray-900 dark:text-white" />
         </button>
 
         <button
           onClick={() => setShowHelp(true)}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
         >
-          <HelpCircle size={20} />
+          <HelpCircle size={20} className="text-gray-900 dark:text-white" />
         </button>
       </div>
 
