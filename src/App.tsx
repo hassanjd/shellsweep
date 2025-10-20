@@ -60,6 +60,7 @@ function Sidebar() {
   const menuItems = [
     { name: "Dashboard", icon: <Home size={18} />, path: "/" },
     { name: "Port Scanner", icon: <Search size={18} />, path: "/port-scanner" },
+    { name: "Reverse Shell Detector", icon: <Shield size={18} />, path: "/reverse-shell-detector" },
     { name: "IoT Vulnerability Checker", icon: <Shield size={18} />, path: "/iot-vuln-checker" },
     { name: "ML IP Analyzer", icon: <Cpu size={18} />, path: "/ml-ip-analyzer" },
     { name: "Network Map", icon: <Map size={18} />, path: "/network-map" },
@@ -113,6 +114,7 @@ function PageTitle() {
     switch(location.pathname) {
       case '/': return 'Dashboard';
       case '/port-scanner': return 'Port Scanner';
+      case '/reverse-shell-detector': return 'Reverse Shell Detector';
       case '/iot-vuln-checker': return 'IoT Vulnerability Checker';
       case '/ml-ip-analyzer': return 'ML IP Analyzer';
       case '/network-map': return 'Network Map';
@@ -348,6 +350,22 @@ interface Port {
   threat?: boolean;
   threat_description?: string;
   recommended_action?: string;
+}
+
+// TypeScript interface for reverse shell findings
+interface ReverseShellFinding {
+  type: string;
+  local_address?: string;
+  remote_address?: string;
+  port?: number;
+  description: string;
+  process?: any;
+  risk_level: string;
+  timestamp: string;
+  pid?: number;
+  name?: string;
+  cmdline?: string[];
+  username?: string;
 }
 
 
@@ -987,6 +1005,301 @@ function VisualMap() {
           </div>
         </div>
       </div>
+
+      {/* Device Details Table */}
+      <div className="mt-6">
+        <h3 className="font-medium mb-4 text-gray-900 dark:text-white">Connected Devices</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  IP Address
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Hostname
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  MAC Address
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Vendor
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {devices.map((device, index) => (
+                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                    {device.ip}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    {device.hostname}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white capitalize">
+                    {device.type}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                      device.status === 'active' ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400' :
+                      device.status === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400' :
+                      device.status === 'danger' ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' :
+                      'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {device.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    {device.mac || 'N/A'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    {device.vendor || 'Unknown'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {devices.length === 0 && !loading && (
+          <p className="text-gray-500 dark:text-gray-400 mt-4">No devices found.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReverseShellDetector() {
+  const [scanConfig, setScanConfig] = useState({
+    target: "localhost"
+  });
+
+  const [findings, setFindings] = useState<ReverseShellFinding[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFinding, setSelectedFinding] = useState<ReverseShellFinding | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
+  const [riskSummary, setRiskSummary] = useState({ high: 0, medium: 0, low: 0 });
+
+  const handleInputChange = (field: string, value: string) => {
+    setScanConfig(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleStartScan = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/reverse-shell/scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(scanConfig),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setFindings([...(data.results.connections || []), ...(data.results.processes || [])]);
+      setRiskSummary(data.results.risk_summary || { high: 0, medium: 0, low: 0 });
+      setCurrentScanId(data.scan_id);
+      console.log('Reverse shell scan results:', data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start scan');
+      console.error('Error starting reverse shell scan:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  function DetailsModal({ show, onClose, finding }: { show: boolean, onClose: () => void, finding: ReverseShellFinding | null }) {
+    if (!show || !finding) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={onClose}>
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-96 p-6 relative" onClick={(e) => e.stopPropagation()}>
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Finding Details</h2>
+          <div className="space-y-2 text-gray-900 dark:text-white">
+            <p><strong>Type:</strong> {finding.type}</p>
+            {finding.local_address && <p><strong>Local Address:</strong> {finding.local_address}</p>}
+            {finding.remote_address && <p><strong>Remote Address:</strong> {finding.remote_address}</p>}
+            {finding.port && <p><strong>Port:</strong> {finding.port}</p>}
+            <p><strong>Description:</strong> {finding.description}</p>
+            <p><strong>Risk Level:</strong>
+              <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                finding.risk_level === 'high' ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' :
+                finding.risk_level === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400' :
+                'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400'
+              }`}>
+                {finding.risk_level.toUpperCase()}
+              </span>
+            </p>
+            {finding.pid && <p><strong>PID:</strong> {finding.pid}</p>}
+            {finding.name && <p><strong>Process Name:</strong> {finding.name}</p>}
+            {finding.username && <p><strong>User:</strong> {finding.username}</p>}
+            {finding.cmdline && finding.cmdline.length > 0 && (
+              <div>
+                <strong>Command Line:</strong>
+                <pre className="mt-1 text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">
+                  {finding.cmdline.join(' ')}
+                </pre>
+              </div>
+            )}
+            <p><strong>Timestamp:</strong> {new Date(finding.timestamp).toLocaleString()}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            ✖
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded">
+          Error: {error}
+        </div>
+      )}
+
+      {/* Reverse Shell Detection Configuration Card */}
+      <div className="bg-white dark:bg-gray-900 shadow rounded-2xl p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Reverse Shell Detection Configuration</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Target Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Target System
+            </label>
+            <input
+              type="text"
+              value={scanConfig.target}
+              onChange={(e) => handleInputChange("target", e.target.value)}
+              placeholder="localhost or IP address"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            />
+          </div>
+
+          {/* Risk Summary Display */}
+          <div className="flex items-center space-x-4">
+            <div className="text-center">
+              <p className="text-red-600 dark:text-red-400 font-bold text-lg">{riskSummary.high}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">High Risk</p>
+            </div>
+            <div className="text-center">
+              <p className="text-yellow-600 dark:text-yellow-400 font-bold text-lg">{riskSummary.medium}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Medium Risk</p>
+            </div>
+            <div className="text-center">
+              <p className="text-green-600 dark:text-green-400 font-bold text-lg">{riskSummary.low}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Low Risk</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          {/* Start Scan Button */}
+          <button
+            onClick={handleStartScan}
+            disabled={loading}
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Shield size={16} className={loading ? "animate-spin" : ""} />
+            {loading ? "Scanning..." : "Start Detection"}
+          </button>
+        </div>
+      </div>
+
+      {/* Findings Card */}
+      <div className="bg-white dark:bg-gray-900 shadow rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Detection Results</h2>
+          <div className="flex gap-2">
+            <button className="border border-gray-300 dark:border-gray-600 px-3 py-1 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm flex items-center gap-1">
+              <Filter size={14} />
+              Filter
+            </button>
+          </div>
+        </div>
+
+        {/* Findings Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Details
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Risk Level
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {findings.map((finding, index) => (
+                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white capitalize">
+                    {finding.type.replace('_', ' ')}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    {finding.remote_address || finding.name || finding.description.split(' - ')[0]}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                      finding.risk_level === "high"
+                        ? "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400"
+                        : finding.risk_level === "medium"
+                        ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400"
+                        : "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400"
+                    }`}>
+                      {finding.risk_level.toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <button
+                      onClick={() => {
+                        setSelectedFinding(finding);
+                        setShowDetailsModal(true);
+                      }}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                    >
+                      Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {findings.length === 0 && !loading && (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <Shield size={48} className="mx-auto mb-4 opacity-50" />
+            <p>No reverse shell indicators detected</p>
+            <p className="text-sm">Run a scan to check for potential threats</p>
+          </div>
+        )}
+      </div>
+
+      <DetailsModal show={showDetailsModal} onClose={() => setShowDetailsModal(false)} finding={selectedFinding} />
     </div>
   );
 }
@@ -1706,12 +2019,13 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/port-scanner" element={<PortScanner />} /> {/* Fixed: Changed from PlaceholderPage to PortScanner */}
+              <Route path="/reverse-shell-detector" element={<ReverseShellDetector />} />
               <Route path="/iot-vuln-checker" element={<PlaceholderPage title="IoT Vulnerability Checker" />} />
               <Route path="/ml-ip-analyzer" element={<PlaceholderPage title="ML IP Analyzer" />} />
               <Route path="/network-map" element={<NetworkMapPage />} />
-              <Route 
-                path="/settings" 
-                element={<SettingsPage onModalOpen={() => setShowSettingsModal(true)} />} 
+              <Route
+                path="/settings"
+                element={<SettingsPage onModalOpen={() => setShowSettingsModal(true)} />}
               />
               <Route path="/help-support" element={<HelpSupportPage />} />
             </Routes>

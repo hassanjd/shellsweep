@@ -71,21 +71,27 @@ def assess_threat(port: int, service: str, state: str) -> tuple[bool, str, str]:
         return False, "", ""
 
     threat_ports = {
-        22: ("SSH", "SSH port open - potential brute force attacks"),
+        22: ("SSH", "SSH port open - potential brute force attacks, check for reverse SSH tunnels"),
         23: ("Telnet", "Telnet port open - insecure protocol, passwords sent in plain text"),
         3389: ("RDP", "RDP port open - potential remote desktop vulnerabilities"),
         445: ("SMB", "SMB port open - vulnerable to exploits like EternalBlue"),
-        80: ("HTTP", "HTTP port open - consider upgrading to HTTPS"),
+        80: ("HTTP", "HTTP port open - consider upgrading to HTTPS, check for HTTP reverse shells"),
         21: ("FTP", "FTP port open - insecure file transfer protocol"),
         25: ("SMTP", "SMTP port open - potential for email spoofing"),
-        53: ("DNS", "DNS port open - check for DNS amplification attacks"),
+        53: ("DNS", "DNS port open - check for DNS amplification attacks and DNS tunneling reverse shells"),
         1433: ("MSSQL", "MSSQL port open - potential SQL injection vulnerabilities"),
         3306: ("MySQL", "MySQL port open - ensure proper authentication"),
         5432: ("PostgreSQL", "PostgreSQL port open - secure database access"),
         6379: ("Redis", "Redis port open - potential unauthorized access"),
         27017: ("MongoDB", "MongoDB port open - ensure authentication is enabled"),
-        8080: ("HTTP-Alt", "HTTP-Alt port open - consider securing web services"),
-        8443: ("HTTPS-Alt", "HTTPS-Alt port open - verify SSL/TLS configuration"),
+        8080: ("HTTP-Alt", "HTTP-Alt port open - consider securing web services, check for HTTP reverse shells"),
+        8443: ("HTTPS-Alt", "HTTPS-Alt port open - verify SSL/TLS configuration, check for HTTPS reverse shells"),
+        # Reverse shell specific ports
+        4444: ("Reverse Shell", "Common Metasploit reverse shell port - HIGH RISK"),
+        6667: ("IRC Reverse", "IRC-based reverse shells - HIGH RISK"),
+        9001: ("Reverse Shell", "Common reverse shell port - HIGH RISK"),
+        1337: ("Leet Reverse", "Leet reverse shell port - HIGH RISK"),
+        31337: ("Elite Reverse", "Elite reverse shell port - HIGH RISK"),
     }
 
     threat_services = {
