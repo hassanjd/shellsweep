@@ -1084,7 +1084,6 @@ function ReverseShellDetector() {
   const [error, setError] = useState<string | null>(null);
   const [selectedFinding, setSelectedFinding] = useState<ReverseShellFinding | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
   const [riskSummary, setRiskSummary] = useState({ high: 0, medium: 0, low: 0 });
 
   const handleInputChange = (field: string, value: string) => {
@@ -1108,7 +1107,6 @@ function ReverseShellDetector() {
       const data = await response.json();
       setFindings([...(data.results.connections || []), ...(data.results.processes || [])]);
       setRiskSummary(data.results.risk_summary || { high: 0, medium: 0, low: 0 });
-      setCurrentScanId(data.scan_id);
       console.log('Reverse shell scan results:', data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start scan');
@@ -1318,33 +1316,9 @@ function PortScanner() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPort, setSelectedPort] = useState<Port | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
 
   const handleExportReport = async () => {
-    if (!currentScanId) {
-      alert("No scan data available to export. Please run a scan first.");
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/export-report/${currentScanId}`);
-      if (!response.ok) {
-        throw new Error(`Export failed: ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `port_scan_report_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error('Export error:', err);
-      alert('Failed to export report. Please try again.');
-    }
+    alert("Export functionality is not yet implemented.");
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -1367,7 +1341,6 @@ function PortScanner() {
       }
       const data = await response.json();
       setOpenPorts(data.results || []);
-      setCurrentScanId(data.scan_id);
       console.log('Scan results:', data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start scan');
@@ -1604,6 +1577,7 @@ function PortScanner() {
 function Dashboard() {
   const [currentScan, setCurrentScan] = useState<any>(null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [reverseShellScan, setReverseShellScan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
@@ -1622,6 +1596,13 @@ function Dashboard() {
         const devicesData = await devicesResponse.json();
         setDevices(devicesData.devices || []);
       }
+
+      // Fetch reverse shell scan results
+      const reverseShellResponse = await fetch('/api/reverse-shell/current-scan');
+      if (reverseShellResponse.ok) {
+        const reverseShellData = await reverseShellResponse.json();
+        setReverseShellScan(reverseShellData);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -1636,6 +1617,9 @@ function Dashboard() {
   const openPortsCount = currentScan?.results?.length || 0;
   const devicesCount = devices.length;
   const lastScanDate = currentScan?.timestamp ? new Date(currentScan.timestamp).toLocaleDateString() : 'No scan yet';
+  const reverseShellFindings = reverseShellScan ? [...(reverseShellScan.connections || []), ...(reverseShellScan.processes || [])] : [];
+  const highRiskFindings = reverseShellFindings.filter((f: ReverseShellFinding) => f.risk_level === 'high');
+  const lastReverseShellScanDate = reverseShellScan?.timestamp ? new Date(reverseShellScan.timestamp).toLocaleDateString() : 'No scan yet';
 
   return (
     <div className="p-6 space-y-6">
@@ -1693,7 +1677,7 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow text-center">
           <p className="text-gray-500 dark:text-gray-400">Devices Detected</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">{devicesCount}</p>
@@ -1714,13 +1698,18 @@ function Dashboard() {
             {currentScan?.results?.filter((port: Port) => port.state === 'Closed').length || 0}
           </p>
         </div>
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow text-center">
+          <p className="text-gray-500 dark:text-gray-400">Reverse Shell Findings</p>
+          <p className="text-3xl font-bold text-red-500">{reverseShellFindings.length}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{highRiskFindings.length} high risk</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-xl p-6 shadow">
           <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recent Activity</h3>
 
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-5 gap-4 mb-6">
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
               <h3 className="text-gray-600 dark:text-gray-300">Devices Detected</h3>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{devicesCount}</p>
@@ -1734,6 +1723,11 @@ function Dashboard() {
               <p className="text-3xl font-bold text-orange-500">
                 {currentScan?.results?.filter((port: Port) => port.state === 'Filtered').length || 0}
               </p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+              <h3 className="text-gray-600 dark:text-gray-300">Reverse Shell Findings</h3>
+              <p className="text-3xl font-bold text-red-500">{reverseShellFindings.length}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{highRiskFindings.length} high risk</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
               <h3 className="text-gray-600 dark:text-gray-300">Last Scan</h3>
@@ -1755,6 +1749,19 @@ function Dashboard() {
                 <p className="text-gray-500 dark:text-gray-400 text-sm">Perform a port scan to see results here.</p>
               </div>
             )}
+            {reverseShellScan ? (
+              <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                <p className="font-medium text-gray-900 dark:text-white">Reverse shell detection completed</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  Scan on {reverseShellScan.target} completed, {reverseShellFindings.length} findings detected ({highRiskFindings.length} high risk).
+                </p>
+              </div>
+            ) : (
+              <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                <p className="font-medium text-gray-900 dark:text-white">No reverse shell scans</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Perform a reverse shell detection scan to see results here.</p>
+              </div>
+            )}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
               <p className="font-medium text-gray-900 dark:text-white">Network scan completed</p>
               <p className="text-gray-500 dark:text-gray-400 text-sm">{devicesCount} devices detected on the network.</p>
@@ -1771,7 +1778,7 @@ function Dashboard() {
 
         <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow">
           <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Network Overview</h3>
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
               <p className="text-gray-500 dark:text-gray-400">Active Devices</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{devices.filter(d => d.status === 'active').length}</p>
@@ -1782,6 +1789,11 @@ function Dashboard() {
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{currentScan?.results?.length || 0}</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+              <p className="text-gray-500 dark:text-gray-400">Reverse Shell Findings</p>
+              <p className="text-3xl font-bold text-red-500">{reverseShellFindings.length}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{highRiskFindings.length} high risk</p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
               <p className="text-gray-500 dark:text-gray-400">Connected Devices</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{devicesCount}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{devices.filter(d => d.type === 'iot').length} IoT devices</p>
@@ -1789,6 +1801,10 @@ function Dashboard() {
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
               <p className="text-gray-500 dark:text-gray-400">Unique IPs</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{new Set(devices.map(d => d.ip)).size}</p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+              <p className="text-gray-500 dark:text-gray-400">Last Reverse Shell Scan</p>
+              <p className="text-lg font-medium text-gray-900 dark:text-white">{lastReverseShellScanDate}</p>
             </div>
           </div>
 
@@ -1803,6 +1819,27 @@ function Dashboard() {
               <div className="flex items-start">
                 <span className="text-gray-500 dark:text-gray-400 mr-2">•</span>
                 <p className="text-sm text-gray-900 dark:text-white">No port scan results available</p>
+              </div>
+            )}
+          </div>
+
+          <h4 className="font-medium mb-2 mt-6 text-gray-900 dark:text-white">Reverse Shell Findings</h4>
+          <div className="space-y-3">
+            {highRiskFindings.slice(0, 3).map((finding: ReverseShellFinding, index: number) => (
+              <div key={index} className="flex items-start">
+                <span className="text-red-500 mr-2">•</span>
+                <p className="text-sm text-gray-900 dark:text-white">{finding.description} ({finding.type})</p>
+              </div>
+            )) || (
+              <div className="flex items-start">
+                <span className="text-gray-500 dark:text-gray-400 mr-2">•</span>
+                <p className="text-sm text-gray-900 dark:text-white">No high-risk reverse shell findings</p>
+              </div>
+            )}
+            {reverseShellFindings.length > 0 && (
+              <div className="flex items-start">
+                <span className="text-gray-500 dark:text-gray-400 mr-2">•</span>
+                <p className="text-sm text-gray-900 dark:text-white">Total findings: {reverseShellFindings.length} ({reverseShellScan?.risk_summary?.high || 0} high, {reverseShellScan?.risk_summary?.medium || 0} medium, {reverseShellScan?.risk_summary?.low || 0} low)</p>
               </div>
             )}
           </div>
