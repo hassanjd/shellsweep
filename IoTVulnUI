@@ -1,0 +1,723 @@
+
+function IoTVulnerabilityChecker() {
+  const [deviceConfig, setDeviceConfig] = useState({
+    deviceType: "IP Camera",
+    firmwareVersion: "",
+    targetIP: "192.168.1.100"
+  });
+
+  const [firmwareFile, setFirmwareFile] = useState<File | null>(null);
+  const [customPayload, setCustomPayload] = useState("");
+  const [payloadType, setPayloadType] = useState("buffer-overflow");
+  const [scanLoading, setScanLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
+
+  const vulnerabilities = [
+    {
+      type: "Outdated Firmware",
+      severity: "High",
+      description: "Firmware version is 3 years old with known CVEs",
+      status: "Vulnerable",
+    },
+    {
+      type: "Hardcoded Credentials",
+      severity: "Critical",
+      description: "Default admin credentials found in firmware",
+      status: "Vulnerable",
+    },
+    {
+      type: "Exposed API",
+      severity: "Medium",
+      description: "Unsecured API endpoint detected",
+      status: "Fixed",
+    }
+  ];
+
+  const handleDeviceConfigChange = (field: string, value: string) => {
+    setDeviceConfig(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFirmwareFile(file);
+    }
+  };
+
+  const handleBasicScan = async () => {
+    setScanLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setScanLoading(false);
+    alert("Basic scan completed!");
+  };
+
+  const handleCustomPayloadTest = async () => {
+    setTestLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setTestLoading(false);
+    alert("Custom payload test completed!");
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'vulnerable': return 'bg-red-100 text-red-800';
+      case 'fixed': return 'bg-green-100 text-green-800';
+      case 'investigating': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+      <div className="p-6 space-y-6">
+        
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column */}
+        <div className="space-y-6">
+          {/* Basic Scan Card */}
+          <div className="bg-white rounded-xl p-6 shadow">
+            <h2 className="text-lg font-semibold mb-4">Basic Scan</h2>
+            <p className="text-gray-600 mb-4">
+              Comprehensive analysis of common IoT vulnerabilities
+            </p>
+            <ul className="space-y-2 mb-6">
+              <li className="flex items-center text-sm text-gray-700">
+                <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                Firmware Image Age Check
+              </li>
+              <li className="flex items-center text-sm text-gray-700">
+                <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                Hardcoded Credentials Detection
+              </li>
+              <li className="flex items-center text-sm text-gray-700">
+                <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                Exposed API Analysis
+              </li>
+            </ul>
+            <button
+              onClick={handleBasicScan}
+              disabled={scanLoading}
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              {scanLoading ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                'Start Basic Scan'
+              )}
+            </button>
+          </div>
+
+          {/* Custom Payload Testing Card */}
+          <div className="bg-white rounded-xl p-6 shadow">
+            <h2 className="text-lg font-semibold mb-4">Custom Payload Testing</h2>
+            <p className="text-gray-600 mb-4">
+              Test specific vulnerabilities with custom payloads
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Payload Type
+              </label>
+              <select
+                value={payloadType}
+                onChange={(e) => setPayloadType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="buffer-overflow">Buffer Overflow</option>
+                <option value="sql-injection">SQL Injection</option>
+                <option value="command-injection">Command Injection</option>
+                <option value="xss">Cross-Site Scripting (XSS)</option>
+                <option value="path-traversal">Path Traversal</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Custom Payload
+              </label>
+              <textarea
+                value={customPayload}
+                onChange={(e) => setCustomPayload(e.target.value)}
+                placeholder="Enter your custom payload..."
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              />
+            </div>
+
+            <button
+              onClick={handleCustomPayloadTest}
+              disabled={testLoading || !customPayload.trim()}
+              className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              {testLoading ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                'Test Custom Payload'
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* Device Configuration Card */}
+          <div className="bg-white rounded-xl p-6 shadow">
+            <h2 className="text-lg font-semibold mb-4">Device Configuration</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Device Type
+                </label>
+                <select
+                  value={deviceConfig.deviceType}
+                  onChange={(e) => handleDeviceConfigChange('deviceType', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option>IP Camera</option>
+                  <option>Smart Router</option>
+                  <option>IoT Sensor</option>
+                  <option>Smart Home Hub</option>
+                  <option>Network Switch</option>
+                  <option>Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Firmware Version
+                </label>
+                <input
+                  type="text"
+                  value={deviceConfig.firmwareVersion}
+                  onChange={(e) => handleDeviceConfigChange('firmwareVersion', e.target.value)}
+                  placeholder="e.g., v2.1.0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Target IP
+                </label>
+                <input
+                  type="text"
+                  value={deviceConfig.targetIP}
+                  onChange={(e) => handleDeviceConfigChange('targetIP', e.target.value)}
+                  placeholder="192.168.1.100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Firmware Upload
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                <input
+                  type="file"
+                  id="firmware-upload"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept=".bin,.img,.hex,.fw"
+                />
+                <label htmlFor="firmware-upload" className="cursor-pointer">
+                  <div className="flex flex-col items-center">
+                    <Upload size={24} className="text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 mb-1">
+                      Drag and drop firmware file or click to upload
+                    </p>
+                    <p className="text-xs text-gray-500">Supported formats: .bin, .img, .hex, .fw</p>
+                    {firmwareFile && (
+                      <p className="text-sm text-green-600 mt-2">
+                        Selected: {firmwareFile.name}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              </div>
+              <button
+                onClick={() => document.getElementById('firmware-upload')?.click()}
+                className="w-full mt-3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg font-medium transition-colors"
+              >
+                Browse Files
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Vulnerability Report Card */}
+      <div className="bg-white rounded-xl p-6 shadow">
+        <h2 className="text-lg font-semibold mb-4">Vulnerability Report</h2>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  VULNERABILITY TYPE
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  SEVERITY
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  DESCRIPTION
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  STATUS
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  ACTIONS
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {vulnerabilities.map((vuln, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                    {vuln.type}
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(vuln.severity)}`}>
+                      {vuln.severity}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-900">
+                    {vuln.description}
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(vuln.status)}`}>
+                      {vuln.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-sm">
+                    <button className="text-blue-600 hover:text-blue-800 font-medium">
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {vulnerabilities.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No vulnerabilities detected. Run a scan to check for security issues.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MLIPAnalyzer() {
+  const [portScanLogs, setPortScanLogs] = useState<File[]>([]);
+  const [vulnerabilityLogs, setVulnerabilityLogs] = useState<File[]>([]);
+  const [reportOptions, setReportOptions] = useState({
+    includeRawLogs: false,
+    includeMLDetails: false,
+    includeSecurityRecommendations: false,
+    includeVisualCharts: false
+  });
+
+  const analysisResults = [
+    {
+      ip: "192.168.1.100",
+      riskScore: 85,
+      mlPrediction: "Malicious",
+      databaseMatches: 3,
+      status: "high"
+    },
+    {
+      ip: "10.0.0.15",
+      riskScore: 45,
+      mlPrediction: "Suspicious",
+      databaseMatches: 1,
+      status: "medium"
+    },
+    {
+      ip: "192.168.1.50",
+      riskScore: 15,
+      mlPrediction: "Benign",
+      databaseMatches: 0,
+      status: "low"
+    },
+    {
+      ip: "172.16.0.25",
+      riskScore: 72,
+      mlPrediction: "Malicious",
+      databaseMatches: 2,
+      status: "high"
+    }
+  ];
+
+  const handlePortScanLogsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setPortScanLogs(files);
+  };
+
+  const handleVulnerabilityLogsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setVulnerabilityLogs(files);
+  };
+
+  const handleReportOptionChange = (option: string) => {
+    setReportOptions(prev => ({
+      ...prev,
+      [option]: !prev[option as keyof typeof reportOptions]
+    }));
+  };
+
+  const handleAnalyzePortScanLogs = () => {
+    if (portScanLogs.length === 0) {
+      alert("Please import port scan log files first");
+      return;
+    }
+    alert("Analyzing port scan logs...");
+    // Add your analysis logic here
+  };
+
+  const handleAnalyzeVulnerabilityLogs = () => {
+    if (vulnerabilityLogs.length === 0) {
+      alert("Please import vulnerability scan logs first");
+      return;
+    }
+    alert("Analyzing vulnerability logs...");
+    // Add your analysis logic here
+  };
+
+  const handleGenerateReport = () => {
+    alert("Generating full report...");
+    // Add report generation logic here
+  };
+
+  const getRiskColor = (score: number) => {
+    if (score >= 70) return 'bg-red-100 text-red-800';
+    if (score >= 40) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-green-100 text-green-800';
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'high': return 'bg-red-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column - Log File Analysis */}
+        <div className="space-y-6">
+          {/* Port Scan Logs Card */}
+          <div className="bg-white rounded-xl p-6 shadow">
+            <h2 className="text-lg font-semibold mb-4">Log File Analysis</h2>
+            
+            <div className="mb-6">
+              <h3 className="font-medium text-gray-700 mb-3">Port Scan Logs</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={portScanLogs.length > 0}
+                    readOnly
+                    className="h-4 w-4 text-blue-600 rounded"
+                  />
+                  <span className="text-sm text-gray-600">
+                    {portScanLogs.length > 0 ? 'Available' : 'Import port scan log files'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" className="h-4 w-4 text-blue-600 rounded" />
+                  <span className="text-sm text-gray-600">Import port scan log files</span>
+                </div>
+
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handlePortScanLogsUpload}
+                    className="hidden"
+                    id="port-scan-logs"
+                    accept=".log,.txt,.csv"
+                  />
+                  <label htmlFor="port-scan-logs" className="cursor-pointer block">
+                    <div className="text-center">
+                      <Upload size={24} className="mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600">Select Files</p>
+                      {portScanLogs.length > 0 && (
+                        <p className="text-xs text-green-600 mt-1">
+                          {portScanLogs.length} file(s) selected
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                onClick={handleAnalyzePortScanLogs}
+                className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium transition-colors"
+              >
+                Analyze Port Scan Logs
+              </button>
+            </div>
+
+            {/* IoT Vulnerability Logs */}
+            <div>
+              <h3 className="font-medium text-gray-700 mb-3">IoT Vulnerability Logs</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={vulnerabilityLogs.length > 0}
+                    readOnly
+                    className="h-4 w-4 text-blue-600 rounded"
+                  />
+                  <span className="text-sm text-gray-600">
+                    {vulnerabilityLogs.length > 0 ? 'Available' : 'Import vulnerability scan logs'}
+                  </span>
+                </div>
+
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleVulnerabilityLogsUpload}
+                    className="hidden"
+                    id="vulnerability-logs"
+                    accept=".log,.txt,.csv"
+                  />
+                  <label htmlFor="vulnerability-logs" className="cursor-pointer block">
+                    <div className="text-center">
+                      <Upload size={24} className="mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600">Select Files</p>
+                      {vulnerabilityLogs.length > 0 && (
+                        <p className="text-xs text-green-600 mt-1">
+                          {vulnerabilityLogs.length} file(s) selected
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                onClick={handleAnalyzeVulnerabilityLogs}
+                className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium transition-colors"
+              >
+                Analyze Vulnerability Logs
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - ML Analysis Results */}
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow">
+              <div className="text-center">
+                <p className="text-gray-500 text-sm">Analyzed IPs</p>
+                <p className="text-2xl font-bold">1,234</p>
+                <p className="text-xs text-green-600 mt-1">↑ 12% from previous scan</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow">
+              <div className="text-center">
+                <p className="text-gray-500 text-sm">Malicious IPs</p>
+                <p className="text-2xl font-bold">47</p>
+                <p className="text-xs text-red-600 mt-1">↑ 5% critical threats</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Confidence Card */}
+          <div className="bg-white rounded-xl p-6 shadow">
+            <div className="text-center">
+              <p className="text-gray-500 text-sm">ML Confidence</p>
+              <p className="text-3xl font-bold text-green-600">94.7%</p>
+              <p className="text-xs text-gray-500 mt-1">Based on latest model</p>
+            </div>
+          </div>
+
+          {/* Results Table */}
+          <div className="bg-white rounded-xl p-6 shadow">
+            <h3 className="text-lg font-semibold mb-4">ML Analysis Results</h3>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      IP ADDRESS
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      RISK SCORE
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      ML PREDICTION
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      DATABASE MATCH
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      ACTIONS
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {analysisResults.map((result, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                        {result.ip}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(result.riskScore)}`}>
+                            {result.riskScore}%
+                          </span>
+                          <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full ${getStatusColor(result.status)}`}
+                              style={{ width: `${result.riskScore}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900">
+                        ({result.mlPrediction})
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900">
+                        Found in {result.databaseMatches} database{result.databaseMatches !== 1 ? 's' : ''}
+                      </td>
+                      <td className="px-4 py-4 text-sm">
+                        <button className="text-blue-600 hover:text-blue-800 font-medium">
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Report Generation */}
+          <div className="bg-white rounded-xl p-6 shadow">
+            <h3 className="text-lg font-semibold mb-4">Generate Full Report</h3>
+            
+            <div className="space-y-3 mb-4">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={reportOptions.includeRawLogs}
+                  onChange={() => handleReportOptionChange('includeRawLogs')}
+                  className="h-4 w-4 text-blue-600 rounded"
+                />
+                <span className="text-sm text-gray-700">Include Raw Logs</span>
+              </label>
+              
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={reportOptions.includeMLDetails}
+                  onChange={() => handleReportOptionChange('includeMLDetails')}
+                  className="h-4 w-4 text-blue-600 rounded"
+                />
+                <span className="text-sm text-gray-700">ML Analysis Details</span>
+              </label>
+              
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={reportOptions.includeSecurityRecommendations}
+                  onChange={() => handleReportOptionChange('includeSecurityRecommendations')}
+                  className="h-4 w-4 text-blue-600 rounded"
+                />
+                <span className="text-sm text-gray-700">Security Recommendations</span>
+              </label>
+              
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={reportOptions.includeVisualCharts}
+                  onChange={() => handleReportOptionChange('includeVisualCharts')}
+                  className="h-4 w-4 text-blue-600 rounded"
+                />
+                <span className="text-sm text-gray-700">Include Visual Charts</span>
+              </label>
+            </div>
+
+            <button
+              onClick={handleGenerateReport}
+              className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-medium transition-colors"
+            >
+              Generate Full Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+function PlaceholderPage({ title }: { title: string }) {
+  return (
+    <div className="p-6">
+      <p className="text-gray-500">This is a placeholder for the {title} page.</p>
+    </div>
+  );
+}
+
+function SettingsPage({ onModalOpen }: { onModalOpen: () => void }) {
+  useEffect(() => {
+    onModalOpen();
+  }, [onModalOpen]);
+
+  return null;
+}
+
+function HelpSupportPage() {
+  return (
+    <div className="p-6">
+      <h2 className="text-xl font-semibold mb-4">Help & Support</h2>
+      <div className="bg-white rounded-xl p-6 shadow">
+        <h3 className="font-medium mb-2">Contact Support</h3>
+        <p className="text-gray-600 mb-4">Email: support@shellsweep.com</p>
+        <p className="text-gray-600">Phone: +92 300 1234567</p>
+      </div>
+    </div>
+  );
+}
